@@ -166,9 +166,8 @@ def check_rss_and_send_to_users(context: CallbackContext):
                                 break
 
                 if send_this_post:
-                    # 转义帖子标题以安全地在 MarkdownV2 中显示
                     escaped_post_title = telegram.utils.helpers.escape_markdown(post_title, version=2)
-                    message_text = f"*{escaped_post_title}*\n\n{post_link}" # 链接通常不需要转义
+                    message_text = f"*{escaped_post_title}*\n\n{post_link}"
                     try:
                         context.bot.send_message(chat_id=user_chat_id,
                                                  text=message_text,
@@ -219,7 +218,7 @@ def get_command_args_as_string(args: list) -> str:
     return " ".join(args).strip()
 
 def start_command(update: telegram.Update, context: CallbackContext):
-    """处理 /start 命令，欢迎用户并初始化其配置 (已修正转义)。"""
+    """处理 /start 命令，欢迎用户并初始化其配置 (已修正尖括号、感叹号和描述转义)。"""
     user = update.effective_user
     user_id_str = str(user.id)
     chat_id = update.effective_chat.id
@@ -236,27 +235,31 @@ def start_command(update: telegram.Update, context: CallbackContext):
         save_user_subscriptions(subscriptions)
         logger.info(f"用户 {user.username} ({user_id_str}) 初始化配置或更新了 chat_id 为 {chat_id}。")
 
-    # 对可能包含特殊字符的用户名字进行转义
     escaped_first_name = telegram.utils.helpers.escape_markdown(user.first_name or "用户", version=2)
 
-    help_message_parts = [
-        f"👋 您好, {escaped_first_name}!",
-        "\n我可以根据您设置的关键词，在 RSS 有新帖子时通知您。\n",
-        "可用命令:",
+    line1 = f"👋 您好, {escaped_first_name}\\!" # 转义感叹号
+    line2 = telegram.utils.helpers.escape_markdown("\n我可以根据您设置的关键词，在 RSS 有新帖子时通知您。\n", version=2)
+    line3 = telegram.utils.helpers.escape_markdown("可用命令:", version=2)
+    
+    # 修正命令描述中的尖括号转义
+    commands_descriptions = [
         f"/start \\- {telegram.utils.helpers.escape_markdown('显示此帮助信息', version=2)}",
-        f"/addkeyword <关键词或短语> \\- {telegram.utils.helpers.escape_markdown('添加关键词。', version=2)}",
-        f"/delkeyword <关键词或短语 或 序号> \\- {telegram.utils.helpers.escape_markdown('删除关键词。', version=2)}",
-        f"/editkeyword <序号> <新的关键词或短语> \\- {telegram.utils.helpers.escape_markdown('修改关键词。', version=2)}",
+        f"/addkeyword \\<关键词或短语\\> \\- {telegram.utils.helpers.escape_markdown('添加关键词。', version=2)}", # 转义 < >
+        f"/delkeyword \\<关键词或短语 或 序号\\> \\- {telegram.utils.helpers.escape_markdown('删除关键词。', version=2)}", # 转义 < >
+        f"/editkeyword \\<序号\\> \\<新的关键词或短语\\> \\- {telegram.utils.helpers.escape_markdown('修改关键词。', version=2)}", # 转义 < >
         f"/listkeywords \\- {telegram.utils.helpers.escape_markdown('显示您订阅的关键词。', version=2)}",
         f"/togglefilter \\- {telegram.utils.helpers.escape_markdown('切换关键词过滤模式 (开/关)。', version=2)}",
         f"/enablenotifications \\- {telegram.utils.helpers.escape_markdown('开启所有来自此机器人的通知。', version=2)}",
         f"/disablenotifications \\- {telegram.utils.helpers.escape_markdown('关闭所有来自此机器人的通知。', version=2)}",
-        f"/myrssstatus \\- {telegram.utils.helpers.escape_markdown('查看您当前的订阅状态。', version=2)}",
-        "\n我会定期检查新帖子！"
+        f"/myrssstatus \\- {telegram.utils.helpers.escape_markdown('查看您当前的订阅状态。', version=2)}"
     ]
-    # 注意: `\-` 用于确保 `-` 不被 MarkdownV2 错误地解析为列表标记的一部分。
+    
+    line_last = telegram.utils.helpers.escape_markdown("\n我会定期检查新帖子！", version=2) # 转义感叹号
 
-    update.message.reply_text("\n".join(help_message_parts), parse_mode=telegram.ParseMode.MARKDOWN_V2)
+    help_message_parts = [line1, line2, line3] + commands_descriptions + [line_last]
+    final_message = "\n".join(help_message_parts)
+
+    update.message.reply_text(final_message, parse_mode=telegram.ParseMode.MARKDOWN_V2)
 
 
 def add_keyword_command(update: telegram.Update, context: CallbackContext):
@@ -278,7 +281,6 @@ def add_keyword_command(update: telegram.Update, context: CallbackContext):
         user_config['keywords'].sort()
         subscriptions[user_id_str] = user_config
         save_user_subscriptions(subscriptions)
-        # 回复时转义用户输入的关键词，以防其包含 Markdown 特殊字符
         escaped_keyword_to_add = telegram.utils.helpers.escape_markdown(keyword_to_add, version=2)
         update.message.reply_text(f"✅ 关键词 '{escaped_keyword_to_add}' 已添加到您的列表。", parse_mode=telegram.ParseMode.MARKDOWN_V2)
     else:
@@ -301,7 +303,6 @@ def list_keywords_command(update: telegram.Update, context: CallbackContext):
     else:
         message_parts = [telegram.utils.helpers.escape_markdown("您当前订阅的关键词 (匹配时不区分大小写):", version=2)]
         for i, kw in enumerate(user_config['keywords']):
-            # 转义每个关键词和列表的点号
             message_parts.append(f"  {i+1}\\. {telegram.utils.helpers.escape_markdown(kw, version=2)}")
         update.message.reply_text("\n".join(message_parts), parse_mode=telegram.ParseMode.MARKDOWN_V2)
 
@@ -325,8 +326,8 @@ def del_keyword_command(update: telegram.Update, context: CallbackContext):
         return
 
     keyword_deleted = False
-    deleted_keyword_value = "" # 未转义的，用于日志或内部逻辑
-    display_deleted_keyword_value = "" # 转义后的，用于回复用户
+    deleted_keyword_value = "" 
+    display_deleted_keyword_value = "" 
 
     if arg_input.isdigit():
         try:
@@ -344,22 +345,18 @@ def del_keyword_command(update: telegram.Update, context: CallbackContext):
     
     if not keyword_deleted:
         keyword_to_delete_lower = arg_input.lower()
-        original_length = len(user_config['keywords'])
-        
-        # 找到要删除的关键词的原始大小写形式
         temp_keywords = []
         found_kw_original_case = None
-        for kw_idx, kw_val in enumerate(user_config['keywords']):
-            if kw_val.lower() == keyword_to_delete_lower:
+        for kw_val in user_config['keywords']:
+            if kw_val.lower() == keyword_to_delete_lower and found_kw_original_case is None:
                 found_kw_original_case = kw_val
-                # 不添加到新列表，实现删除
             else:
                 temp_keywords.append(kw_val)
         
         if found_kw_original_case:
             user_config['keywords'] = temp_keywords
             keyword_deleted = True
-            deleted_keyword_value = found_kw_original_case # 记录原始大小写形式
+            deleted_keyword_value = found_kw_original_case
             display_deleted_keyword_value = telegram.utils.helpers.escape_markdown(deleted_keyword_value, version=2)
         else:
             escaped_arg_input = telegram.utils.helpers.escape_markdown(arg_input, version=2)
@@ -423,6 +420,7 @@ def edit_keyword_command(update: telegram.Update, context: CallbackContext):
         if modified_by_get: save_user_subscriptions(subscriptions)
 
 def toggle_notifications_command(update: telegram.Update, context: CallbackContext, enable: bool):
+    """通用函数，用于开启或关闭用户的通知 (已修正转义)。"""
     user = update.effective_user
     user_id_str = str(user.id)
     chat_id = update.effective_chat.id
@@ -438,7 +436,12 @@ def toggle_notifications_command(update: telegram.Update, context: CallbackConte
     status_message_unescaped = "开启" if enable else "关闭"
     escaped_status_message = telegram.utils.helpers.escape_markdown(status_message_unescaped, version=2)
     icon = "🔔" if enable else "🔕"
-    update.message.reply_text(f"{icon} 您（来自此机器人的）所有通知已设为 **{escaped_status_message}**。", parse_mode=telegram.ParseMode.MARKDOWN_V2)
+
+    prefix_text_unescaped = "您(来自此机器人的)所有通知已设为 "
+    escaped_prefix_text = telegram.utils.helpers.escape_markdown(prefix_text_unescaped, version=2)
+    
+    update.message.reply_text(f"{icon} {escaped_prefix_text}**{escaped_status_message}**。", parse_mode=telegram.ParseMode.MARKDOWN_V2)
+
 
 def enable_notifications_command(update: telegram.Update, context: CallbackContext):
     toggle_notifications_command(update, context, True)
@@ -504,7 +507,7 @@ def my_rss_status_command(update: telegram.Update, context: CallbackContext):
         telegram.utils.helpers.escape_markdown("ℹ️ 您当前的 RSS 订阅状态:", version=2),
         f"{enabled_icon} {telegram.utils.helpers.escape_markdown('总体通知: ', version=2)}**{escaped_enabled_status_text}**",
         f"{filter_icon} {telegram.utils.helpers.escape_markdown('关键词过滤: ', version=2)}**{escaped_filter_status_text_part}**",
-        "" # 用于换行
+        "" 
     ]
     
     if not user_config['keywords']:
@@ -548,7 +551,7 @@ def main():
     else:
         logger.info("环境变量 ADMIN_CHAT_ID 未设置。管理员通知将仅记录到日志。")
 
-    updater = Updater(TELEGRAM_BOT_TOKEN, use_context=True) # 使用 python-telegram-bot v13.x
+    updater = Updater(TELEGRAM_BOT_TOKEN, use_context=True)
     dp = updater.dispatcher
     jq = updater.job_queue
 
