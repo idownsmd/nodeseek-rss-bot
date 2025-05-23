@@ -1,11 +1,11 @@
-# Telegram RSS 多用户订阅机器人 🤖
+# Nodeseek RSS 多用户订阅机器人 🤖
 
-一个功能丰富的 Telegram 机器人，允许用户个性化订阅 RSS Feed 更新，支持多用户、关键词过滤和灵活的推送模式。
+一个功能丰富的 Telegram 机器人，允许用户个性化订阅 Nodeseek RSS Feed 更新，支持多用户、关键词过滤和灵活的推送模式。
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/sooxoo/nodeseek-rss-bot.svg)](https://hub.docker.com/r/sooxoo/nodeseek-rss-bot)
 ## 📖 项目简介
 
-本项目是一个基于 Python 开发的多用户 Telegram 机器人，旨在为用户提供个性化的 RSS Feed 更新推送服务。用户可以通过与机器人私聊，订阅特定的关键词，并选择仅接收包含这些关键词的 RSS 帖子，或者接收 RSS Feed 中的所有帖子。机器人会定期检查指定的 RSS Feed，并将符合用户订阅条件的最新帖子标题和链接直接推送到用户的 Telegram。
+本项目是一个基于 Python 开发的多用户 Nodeseek Telegram 机器人，旨在为用户提供个性化的 RSS Feed 更新推送服务。用户可以通过与机器人私聊，订阅特定的关键词，并选择仅接收包含这些关键词的 RSS 帖子，或者接收 RSS Feed 中的所有帖子。机器人会定期检查指定的 RSS Feed，并将符合用户订阅条件的最新帖子标题和链接直接推送到用户的 Telegram。
 
 默认配置下，机器人监控 NodeSeek 社区的 RSS Feed (`https://rss.nodeseek.com/`)，但此 RSS 源 URL 可以通过环境变量灵活配置，使其适用于监控任何公开的 RSS Feed。
 
