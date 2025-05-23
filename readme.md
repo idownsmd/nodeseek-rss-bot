@@ -2,13 +2,14 @@
 
 一个功能丰富的 Telegram 机器人，允许用户个性化订阅 RSS Feed 更新，支持多用户、关键词过滤和灵活的推送模式。
 
+[![Docker Pulls](https://img.shields.io/docker/pulls/sooxoo/nodeseek-rss-bot.svg)](https://hub.docker.com/r/sooxoo/nodeseek-rss-bot)
 ## 📖 项目简介
 
 本项目是一个基于 Python 开发的多用户 Telegram 机器人，旨在为用户提供个性化的 RSS Feed 更新推送服务。用户可以通过与机器人私聊，订阅特定的关键词，并选择仅接收包含这些关键词的 RSS 帖子，或者接收 RSS Feed 中的所有帖子。机器人会定期检查指定的 RSS Feed，并将符合用户订阅条件的最新帖子标题和链接直接推送到用户的 Telegram。
 
 默认配置下，机器人监控 NodeSeek 社区的 RSS Feed (`https://rss.nodeseek.com/`)，但此 RSS 源 URL 可以通过环境变量灵活配置，使其适用于监控任何公开的 RSS Feed。
 
-项目采用 Docker 进行容器化部署，简化了安装和管理过程，并通过数据卷实现用户数据和已处理帖子记录的持久化存储。
+项目采用 Docker进行容器化部署，简化了安装和管理过程，并通过数据卷实现用户数据和已处理帖子记录的持久化存储。
 
 ## ✨ 主要功能
 
@@ -35,6 +36,8 @@
 
 ## 🚀 快速开始与部署 (使用 Docker)
 
+本机器人已在 Docker Hub 上提供预构建的镜像 `sooxoo/nodeseek-rss-bot:latest`，方便快速部署。
+
 ### 📋 前提条件
 
 1.  **Docker 已安装**: 确保您的服务器或本地机器上已安装并运行 Docker。
@@ -53,32 +56,25 @@
 | `CHECK_INTERVAL_SECONDS` | RSS Feed 检查间隔时间（秒）。                                    | 否       | `300` (5 分钟)                 |
 | `ADMIN_CHAT_ID`          | (可选) 接收机器人管理和错误通知的管理员 Telegram Chat ID。         | 否       | 无                             |
 
-### 部署步骤
+### 🐳 使用预构建的 Docker Hub 镜像进行部署 (推荐)
 
-1.  **获取项目文件**:
-    确保您拥有以下三个文件，并将它们放置在同一个项目目录下 (例如 `telegram_rss_bot`):
-    * `bot.py` (机器人核心脚本)
-    * `Dockerfile` (用于构建 Docker 镜像)
-    * `requirements.txt` (Python 依赖列表)
-
-2.  **构建 Docker 镜像**:
-    在您的项目目录下，打开终端并运行：
+1.  **拉取 Docker 镜像:**
+    打开终端并运行以下命令，从 Docker Hub 拉取预构建的镜像：
     ```bash
-    docker build -t my-rss-bot .
+    docker pull sooxoo/nodeseek-rss-bot:latest
     ```
-    *(您可以将 `my-rss-bot` 替换为您希望的镜像名称)*
 
-3.  **创建持久化数据目录**:
+2.  **创建持久化数据目录:**
     为了在容器重启后保留用户数据和已发送帖子记录，您需要在宿主机上创建一个目录用于数据持久化。
     ```bash
     # 示例：在 /opt 目录下创建数据文件夹
     sudo mkdir -p /opt/my_rss_bot_data
-    # (可选，根据您的系统和用户调整权限)
+    # (可选，根据您的系统和用户调整权限，确保 Docker 有写入权限)
     # sudo chown $(whoami):$(whoami) /opt/my_rss_bot_data
     ```
-    *(您也可以选择其他路径，例如 `$(pwd)/bot_data` 以在当前目录下创建)*
+    *(您可以选择其他路径，例如 `$(pwd)/bot_data` 以在当前目录下创建)*
 
-4.  **运行 Docker 容器**:
+3.  **运行 Docker 容器:**
     执行以下命令启动机器人容器。请务必替换占位符为您自己的实际值。
     ```bash
     docker run -d \
@@ -90,15 +86,15 @@
       # -e ADMIN_CHAT_ID="YOUR_ADMIN_TELEGRAM_CHAT_ID" \
       -v /opt/my_rss_bot_data:/app/data \
       --restart unless-stopped \
-      my-rss-bot
+      sooxoo/nodeseek-rss-bot:latest
     ```
     * **重要**:
         * 将 `YOUR_ACTUAL_TELEGRAM_BOT_TOKEN` 替换为您的真实 Bot Token。
         * 根据需要调整 `RSS_URL` 和 `CHECK_INTERVAL_SECONDS`。
-        * 将 `/opt/my_rss_bot_data` 替换为您在第3步中创建的宿主机数据目录路径。
-        * `my-rss-bot` 是您在第2步中构建的镜像名称。
+        * 将 `/opt/my_rss_bot_data` 替换为您在第2步中创建的宿主机数据目录路径。
+        * `sooxoo/nodeseek-rss-bot:latest` 是您从 Docker Hub 拉取的镜像名称。
 
-5.  **(可选) 查看日志**:
+4.  **(可选) 查看日志**:
     您可以使用以下命令查看机器人的运行日志：
     ```bash
     docker logs nodeseek-rss-subscriber
@@ -106,6 +102,37 @@
     要实时跟踪日志，请添加 `-f` 参数：
     ```bash
     docker logs -f nodeseek-rss-subscriber
+    ```
+
+### 🛠️ (可选) 从源码构建并部署
+
+如果您希望自行从源码构建镜像，请按以下步骤操作：
+
+1.  **获取项目文件:**
+    克隆本 GitHub 仓库或下载源码压缩包，并解压到您的项目目录 (例如 `telegram_rss_bot`)。确保该目录下包含 `bot.py`, `Dockerfile`, 和 `requirements.txt`。
+
+2.  **构建 Docker 镜像:**
+    在您的项目目录下，打开终端并运行：
+    ```bash
+    docker build -t your-custom-image-name:latest .
+    ```
+    *(将 `your-custom-image-name` 替换为您希望的本地镜像名称，例如 `my-local-rss-bot:latest`)*
+
+3.  **创建持久化数据目录:**
+    (同上文“使用预构建的 Docker Hub 镜像进行部署”中的第2步)
+
+4.  **运行 Docker 容器:**
+    使用您在上面第2步中构建的自定义镜像名称替换 `docker run` 命令中的镜像名：
+    ```bash
+    docker run -d \
+      --name nodeseek-rss-subscriber \
+      -e TELEGRAM_BOT_TOKEN="YOUR_ACTUAL_TELEGRAM_BOT_TOKEN" \
+      -e RSS_URL="[https://rss.nodeseek.com/](https://rss.nodeseek.com/)" \
+      -e CHECK_INTERVAL_SECONDS="300" \
+      # -e ADMIN_CHAT_ID="YOUR_ADMIN_TELEGRAM_CHAT_ID" \
+      -v /opt/my_rss_bot_data:/app/data \
+      --restart unless-stopped \
+      your-custom-image-name:latest
     ```
 
 ## 🤖 如何使用
